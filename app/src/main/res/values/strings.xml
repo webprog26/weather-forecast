@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Weather Forecast</string>
+
+    <string name="detecting_user_location_text">Detecting your location</string>
+
+    <string name="accuweather_api_key">1eEXgpwwM9d7RGepTAXgEQlPMx5A5f8T</string>
+
+    <string name="loading_forecast_text">Loading weather forecast for\n %1$s</string>
+
+    <string name="location_permission_request_explanation">Please, accept location permission to get weather forecast</string>
 </resources>
