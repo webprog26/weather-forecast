@@ -14,23 +14,24 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.lang.Exception
 
-class MainViewModel(application: Application): AndroidViewModel(application) {
+class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val viewModelJob = Job()
     private val coroutineScope = CoroutineScope(viewModelJob + Dispatchers.Main)
     private val storage = PreferencesStorage(application.applicationContext)
 
-    private val fusedLocationProvider: FusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(application.applicationContext)
+    private val fusedLocationProvider: FusedLocationProviderClient =
+        LocationServices.getFusedLocationProviderClient(application.applicationContext)
 
-    private val _userLocation =  MutableLiveData<Location?>()
+    private val _userLocation = MutableLiveData<Location?>()
 
     val userLocation: LiveData<Location?>
-    get() = _userLocation
+        get() = _userLocation
 
     private val _currentCity = MutableLiveData<String?>()
 
     val currentCity: LiveData<String?>
-    get() = _currentCity
+        get() = _currentCity
 
     fun detectUserLocation() {
         try {
@@ -44,11 +45,23 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
         }
     }
 
-    fun onUserLocationDetected(apiKey: String, coordinates: String, language: String, details: String, topLevel: String) {
+    fun onUserLocationDetected(
+        apiKey: String,
+        coordinates: String,
+        language: String,
+        details: String,
+        topLevel: String
+    ) {
         getLocationDataFromApi(apiKey, coordinates, language, details, topLevel)
     }
 
-    private fun getLocationDataFromApi(apiKey: String, coordinates: String, language: String, details: String, topLevel: String) {
+    private fun getLocationDataFromApi(
+        apiKey: String,
+        coordinates: String,
+        language: String,
+        details: String,
+        topLevel: String
+    ) {
         coroutineScope.launch {
             val getLocationDataDeferred = WeatherApi.retrofitService.getLocationDataAsync(
                 apiKey,
@@ -56,16 +69,47 @@ class MainViewModel(application: Application): AndroidViewModel(application) {
                 language,
                 details,
                 topLevel
-            );
+            )
             try {
                 val locationData = getLocationDataDeferred.await()
-                log("request successful: $locationData")
+                log("location request successful: $locationData")
                 storage.setCurrentLocationData(locationData)
                 _currentCity.value = "${storage.getCurrentCity()}, ${storage.getCurrentCountry()}"
+                getDailyForecast(apiKey, language,  "false", "true")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
+    }
+
+    private fun getDailyForecast(
+        apiKey: String,
+        language: String,
+        details: String,
+        metric: String
+    ) {
+        storage.getLocationKey()
+            .let {
+                if (it != null) {
+                    coroutineScope.launch {
+                        //Todo change hardcodd values to the settings
+                        val getDailyForecast = WeatherApi.retrofitService.getDailyForecastAsync(
+                            it,
+                            apiKey,
+                            language,
+                            details,
+                            metric
+                        )
+
+                        try {
+                            val dailyForecastData = getDailyForecast.await()
+                            log("daily forecast request successful: ${dailyForecastData}")
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+            }
     }
 
     override fun onCleared() {
