@@ -7,8 +7,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.webprog26.weatherforecast.data.DailyForecastData
 import com.webprog26.weatherforecast.databinding.FragmentForecastBinding
+import com.webprog26.weatherforecast.ui.WeatherForecastAdapter
 
 
 /**
@@ -59,8 +61,9 @@ class ForecastFragment : Fragment() {
 
     private fun updateDailyForecast(dailyForecastData: DailyForecastData) {
         binding.progressBar.visibility = View.GONE
-        binding.scrollView.visibility = View.VISIBLE
-        binding.dailyForecastView.populateWithData(dailyForecastData)
+        binding.recyclerView.visibility = View.VISIBLE
+        binding.recyclerView.layoutManager = LinearLayoutManager(activity)
+        binding.recyclerView.adapter = WeatherForecastAdapter(arrayListOf(dailyForecastData))
 
         binding.swipeRefresh.isRefreshing.let {
             if (it) {

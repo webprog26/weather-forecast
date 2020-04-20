@@ -91,6 +91,7 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
 
                             try {
                                 val dailyForecastOrigin = getDailyForecast.await()
+                                log("dailyForecastOrigin: $dailyForecastOrigin")
                                 val forecast = JSONObject(dailyForecastOrigin).getJSONArray(
                                     KEY_DAILY_FORECASTS).getJSONObject(0)
                                 val updatedAt = forecast.getString(KEY_DATE)
@@ -112,7 +113,8 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
                                     iconDay.toInt(),
                                     iconDayPhrase,
                                     iconNight.toInt(),
-                                    iconNightPhrase
+                                    iconNightPhrase,
+                                    it.currentCity
                                 )
                                 insertDailyForecastDataToDb(dailyForecastData)
                                 _dailyForecastData.value = getDailyForecastDataFromDb()
