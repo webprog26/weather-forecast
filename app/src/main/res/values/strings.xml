@@ -8,4 +8,8 @@
     <string name="loading_forecast_text">Loading weather forecast for\n %1$s</string>
 
     <string name="location_permission_request_explanation">Please, accept location permission to get weather forecast</string>
+
+    <string name="max_and_min_temp_text">%1$.1f&#176;/%2$.1f&#176;</string>
+
+    <string name="current_weather_icon_content_description">Current weather icon</string>
 </resources>

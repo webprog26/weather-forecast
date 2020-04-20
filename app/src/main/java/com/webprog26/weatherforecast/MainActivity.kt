@@ -4,50 +4,68 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
-import androidx.lifecycle.ViewModelProviders
-import com.google.android.material.snackbar.Snackbar
-import com.webprog26.weatherforecast.databinding.ActivityMainBinding
+import androidx.lifecycle.ViewModelProvider
 import java.util.*
 
 const val ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE = 0
-class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
+class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDataObtainedListener,
+    ForecastFragment.OnForecastUpdateRequestedListener {
+
+    private val locationFetchingFragment = LocationFetchingFragment()
+    private val forecastFragment = ForecastFragment()
 
     private lateinit var mainViewModel: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = DataBindingUtil.setContentView<ActivityMainBinding>(this, R.layout.activity_main)
 
         val viewModelFactory = ViewModelFactory(application)
 
-        mainViewModel = ViewModelProviders.of(this, viewModelFactory).get(MainViewModel::class.java)
+        mainViewModel = ViewModelProvider(this, viewModelFactory).get(MainViewModel::class.java)
+
         mainViewModel.userLocation.observe(this, Observer {
-            if (it != null) {
-                log("Location received. latitude: ${it.latitude}, longitude: ${it.longitude}")
-                binding.progressBar.visibility = View.VISIBLE
-                binding.tvMessage.visibility = View.VISIBLE
-                binding.tvMessage.text = getString(R.string.detecting_user_location_text)
-                mainViewModel.onUserLocationDetected(getString(R.string.accuweather_api_key),
+            it?.let {
+                mainViewModel.onUserLocationDetected(
+                    getString(R.string.accuweather_api_key),
                     "${it.latitude}, ${it.longitude}", Locale.getDefault().language,
-                "false", "true")
-            } else {
-                log("Location is null")
+                    "false", "true"
+                )
+                if (locationFetchingFragment.isAdded) {
+                    locationFetchingFragment.onCoordinatesReceived()
+                }
             }
         })
-        mainViewModel.currentCity.observe(this, Observer {
+
+        mainViewModel.userLocationData.observe(this, Observer {
+            if (it == null) {
+                log("userLocationData is null")
+                supportFragmentManager.beginTransaction()
+                    .add(android.R.id.content, locationFetchingFragment).commit()
+            } else {
+                supportFragmentManager.beginTransaction()
+                    .replace(android.R.id.content, forecastFragment).commit()
+            }
+        })
+
+        mainViewModel.dailyForecastData.observe(this, Observer {
             it?.let {
-                binding.tvMessage.text = getString(R.string.loading_forecast_text, it);
+                if (forecastFragment.isAdded) {
+                    forecastFragment.setDailyForecastData(it)
+                }
             }
         })
 
         checkLocationPermissionIfNeededAndProceed()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        log("onStart()")
     }
 
     override fun onRestart() {
@@ -76,18 +94,27 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
         when (requestCode) {
             ACCESS_COARSE_LOCATION_PERMISSION_REQUEST_CODE -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     initLocationFetching()
                 } else {
-                    binding.tvMessage.text = getString(R.string.location_permission_request_explanation)
+                    Toast.makeText(this, R.string.location_permission_request_explanation, Toast.LENGTH_SHORT).show()
                 }
                 return
             }
         }
+    }
 
+    override fun onLocationDataObtained() {
+
+    }
+
+    override fun onForecastUpdateRequested() {
+        mainViewModel.loadDailyForecast(
+            getString(R.string.accuweather_api_key),
+            Locale.getDefault().language, "false", "true"
+        )
     }
 
     private fun checkLocationPermissionIfNeededAndProceed() {
@@ -114,7 +141,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initLocationFetching() {
-        log("initLocationFetching")
         mainViewModel.detectUserLocation()
     }
 }
