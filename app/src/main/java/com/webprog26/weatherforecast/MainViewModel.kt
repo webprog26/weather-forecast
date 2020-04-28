@@ -6,10 +6,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.webprog26.weatherforecast.data.DailyForecastData
-import com.webprog26.weatherforecast.data.UserLocationData
+import com.webprog26.weatherforecast.data.*
 import com.webprog26.weatherforecast.network.WeatherApi
 import kotlinx.coroutines.*
+import org.json.JSONArray
 import org.json.JSONObject
 import java.lang.Exception
 
@@ -28,6 +28,15 @@ private const val KEY_NIGHT = "Night"
 private const val KEY_ICON = "Icon"
 private const val KEY_ICON_PHRASE = "IconPhrase"
 
+private const val KEY_HOURLY_DATE_TIME = "DateTime"
+private const val KEY_HOURLY_WEATHER_ICON = "WeatherIcon"
+private const val KEY_HOURLY_HAS_PRECIPITATION = "HasPrecipitation"
+private const val KEY_HOURLY_PRECIPITATION_TYPE = "PrecipitationType"
+private const val KEY_HOURLY_PRECIPITATION_INTENSITY = "PrecipitationIntensity"
+private const val KEY_HOURLY_PRECIPITATION_PROBABILITY = "PrecipitationProbability"
+private const val KEY_HOURLY_IS_DAY_LIGHT = "IsDaylight"
+
+
 class MainViewModel(application: Application) : AbstractViewModel(application) {
 
     private val fusedLocationProvider: FusedLocationProviderClient =
@@ -43,23 +52,41 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
 
     private val _dailyForecastData = MutableLiveData<DailyForecastData?>()
     val dailyForecastData: LiveData<DailyForecastData?>
-    get() = _dailyForecastData
+        get() = _dailyForecastData
 
+    private val _hourlyForecastData = MutableLiveData<HourlyForecastDataWrapper>()
+    val hourlyForecastData: LiveData<HourlyForecastDataWrapper>
+        get() = _hourlyForecastData
 
     init {
-       coroutineScope.launch {
-           _dailyForecastData.value = getDailyForecastDataFromDb()
-           _userLocationData.value = getUserLocationDataFromDb()
-       }
+        coroutineScope.launch {
+            _userLocationData.value = getUserLocationDataFromDb()
+            _dailyForecastData.value = getDailyForecastDataFromDb()
+            _hourlyForecastData.value = HourlyForecastDataWrapper(getHourlyForecastDataFromDb())
+        }
     }
 
-    fun loadDailyForecast(apiKey: String,
-                          language: String,
-                          details: String,
-                          metric: String) {
+    fun loadDailyForecast(
+        apiKey: String,
+        language: String,
+        details: String,
+        metric: String,
+        useMockData: Boolean
+    ) {
         coroutineScope.launch {
-            getDailyForecast(apiKey, language, details, metric)
-            _dailyForecastData.value = getDailyForecastDataFromDb()
+            getDailyForecast(apiKey, language, details, metric, useMockData)
+        }
+    }
+
+    fun loadHourlyForecast(
+        apiKey: String,
+        language: String,
+        details: String,
+        metric: String,
+        useMockData: Boolean
+    ) {
+        coroutineScope.launch {
+            getHourlyForecast(apiKey, language, details, metric, useMockData)
         }
     }
 
@@ -73,53 +100,140 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
         apiKey: String,
         language: String,
         details: String,
-        metric: String
+        metric: String,
+        useMockData: Boolean
     ) {
         withContext(Dispatchers.IO) {
             weatherForecastDao.getUserLocationData()
-                .let {
-                    if (it != null) {
-                        coroutineScope.launch {
+                ?.let {
+                    coroutineScope.launch {
 
-                            val getDailyForecast = WeatherApi.retrofitService.getDailyForecastAsync(
-                                it.locationKey,
-                                apiKey,
-                                language,
-                                details,
-                                metric
-                            )
-
-                            try {
-                                val dailyForecastOrigin = getDailyForecast.await()
-                                val forecast = JSONObject(dailyForecastOrigin).getJSONArray(
-                                    KEY_DAILY_FORECASTS).getJSONObject(0)
-                                val updatedAt = forecast.getString(KEY_DATE)
-                                val temp = forecast.getJSONObject(KEY_TEMP)
-                                val minTemp = temp.getJSONObject(KEY_TEMP_MIN).getString(KEY_VALUE)
-                                val maxTemp = temp.getJSONObject(KEY_TEMP_MAX).getString(KEY_VALUE)
-                                val day = forecast.getJSONObject(KEY_DAY)
-                                val iconDay = day.getString(KEY_ICON)
-                                val iconDayPhrase = day.getString(KEY_ICON_PHRASE)
-                                val night = forecast.getJSONObject(KEY_NIGHT)
-                                val iconNight = night.getString(KEY_ICON)
-                                val iconNightPhrase = night.getString(KEY_ICON_PHRASE)
-
-                                val dailyForecastData = DailyForecastData(
-                                    0,
-                                    updatedAt,
-                                    minTemp.toFloat(),
-                                    maxTemp.toFloat(),
-                                    iconDay.toInt(),
-                                    iconDayPhrase,
-                                    iconNight.toInt(),
-                                    iconNightPhrase
-                                )
-                                insertDailyForecastDataToDb(dailyForecastData)
-                                _dailyForecastData.value = getDailyForecastDataFromDb()
-                            } catch (e: Exception) {
-                                e.printStackTrace()
+                        try {
+                            val dailyForecastOrigin = if (useMockData) {
+                                getDailyMockData()
+                            } else {
+                                WeatherApi.retrofitService.getDailyForecastAsync(
+                                    it.locationKey,
+                                    apiKey,
+                                    language,
+                                    details,
+                                    metric
+                                ).await()
                             }
+                            val forecast = JSONObject(dailyForecastOrigin).getJSONArray(
+                                KEY_DAILY_FORECASTS
+                            ).getJSONObject(0)
+                            val updatedAt = forecast.getString(KEY_DATE)
+                            val temp = forecast.getJSONObject(KEY_TEMP)
+                            val minTemp = temp.getJSONObject(KEY_TEMP_MIN).getString(KEY_VALUE)
+                            val maxTemp = temp.getJSONObject(KEY_TEMP_MAX).getString(KEY_VALUE)
+                            val day = forecast.getJSONObject(KEY_DAY)
+                            val iconDay = day.getString(KEY_ICON)
+                            val iconDayPhrase = day.getString(KEY_ICON_PHRASE)
+                            val night = forecast.getJSONObject(KEY_NIGHT)
+                            val iconNight = night.getString(KEY_ICON)
+                            val iconNightPhrase = night.getString(KEY_ICON_PHRASE)
+
+                            val dailyForecastData = DailyForecastData(
+                                1,
+                                updatedAt,
+                                minTemp.toFloat(),
+                                maxTemp.toFloat(),
+                                iconDay.toInt(),
+                                iconDayPhrase,
+                                iconNight.toInt(),
+                                iconNightPhrase,
+                                it.currentCity
+                            )
+                            insertDailyForecastDataToDb(dailyForecastData)
+                            _dailyForecastData.value = getDailyForecastDataFromDb()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
+                    }
+                }
+        }
+    }
+
+    private suspend fun getHourlyForecast(
+        apiKey: String,
+        language: String,
+        details: String,
+        metric: String,
+        useMockData: Boolean
+    ) {
+        withContext(Dispatchers.IO) {
+            weatherForecastDao.getUserLocationData()
+                ?.let {
+                    coroutineScope.launch {
+                        try {
+                            val hourlyForecastOrigin = if (useMockData) {
+                                getHourlyMockData()
+                            } else {
+                                WeatherApi.retrofitService.get12HoursForecastAsync(
+                                    it.locationKey, apiKey, language, details, metric
+                                ).await()
+                            }
+                            val jsonArray = JSONArray(hourlyForecastOrigin)
+                            val hourlyForecastsList = ArrayList<HourlyForecastData>()
+
+                            for (i in 0 until jsonArray.length()) {
+                                val jsonObject = jsonArray.getJSONObject(i)
+                                val dateTime = jsonObject.getString(KEY_HOURLY_DATE_TIME)
+
+                                val timeStartIndex = dateTime.indexOf('T') + 1
+                                val timeEndIndex = timeStartIndex + 5
+
+                                val time = dateTime.substring(timeStartIndex, timeEndIndex)
+
+                                val temp = jsonObject.getJSONObject(KEY_TEMP).getString(KEY_VALUE)
+                                val icon = jsonObject.getInt(KEY_HOURLY_WEATHER_ICON)
+                                val iconPhrase = jsonObject.getString(KEY_ICON_PHRASE)
+                                val hasPrecipitation =
+                                    jsonObject?.getString(KEY_HOURLY_HAS_PRECIPITATION)?.toBoolean()
+                                var precipitationType: String? = null
+                                var precipitationIntensity: String? = null
+
+                                hasPrecipitation?.let {
+                                    if (hasPrecipitation) {
+                                        precipitationType = jsonObject.getString(
+                                            KEY_HOURLY_PRECIPITATION_TYPE
+                                        )
+                                        precipitationIntensity = jsonObject.getString(
+                                            KEY_HOURLY_PRECIPITATION_INTENSITY
+                                        )
+                                    }
+                                }
+
+                                val precipitationProbability = jsonObject.getInt(
+                                    KEY_HOURLY_PRECIPITATION_PROBABILITY
+                                )
+
+                                val isDayLight = jsonObject.getString(KEY_HOURLY_IS_DAY_LIGHT)
+
+                                val hourlyForecastData = HourlyForecastData(
+                                    id = i.toLong(),
+                                    time = time,
+                                    temp = temp.toFloat(),
+                                    icon = icon,
+                                    iconPhrase = iconPhrase,
+                                    hasPrecipitation = hasPrecipitation!!,
+                                    precipitationType = precipitationType,
+                                    precipitationIntensity = precipitationIntensity,
+                                    precipitationProbability = precipitationProbability,
+                                    isDayLight = isDayLight
+                                )
+                                hourlyForecastsList.add(hourlyForecastData)
+                            }
+
+                            insertHourlyForecastDataToDb(hourlyForecastsList)
+                            _hourlyForecastData.value =
+                                HourlyForecastDataWrapper(hourlyForecastsList)
+
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+
                     }
                 }
         }
@@ -136,13 +250,24 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
             weatherForecastDao.getUserLocationData()
         }
     }
+
+    private suspend fun insertHourlyForecastDataToDb(hourlyForecastData: List<HourlyForecastData>) {
+        withContext(Dispatchers.IO) {
+            weatherForecastDao.insertHourlyForecastData(hourlyForecastData)
+        }
+    }
+
+    private suspend fun getHourlyForecastDataFromDb(): List<HourlyForecastData?> {
+        return withContext(Dispatchers.IO) {
+            weatherForecastDao.getHourlyData()
+        }
+    }
+
     fun detectUserLocation() {
-        log("${javaClass.simpleName} detectUserLocation()")
         try {
             fusedLocationProvider.lastLocation.addOnSuccessListener {
                 it?.let {
                     _userLocation.value = it
-                    log("location received ${it.latitude} ${it.longitude}")
                 }
             }
         } catch (se: SecurityException) {
@@ -155,9 +280,10 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
         coordinates: String,
         language: String,
         details: String,
-        topLevel: String
+        topLevel: String,
+        useMockData: Boolean
     ) {
-        getLocationDataFromApi(apiKey, coordinates, language, details, topLevel)
+        getLocationDataFromApi(apiKey, coordinates, language, details, topLevel, useMockData)
     }
 
     private fun getLocationDataFromApi(
@@ -165,23 +291,28 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
         coordinates: String,
         language: String,
         details: String,
-        topLevel: String
+        topLevel: String,
+        useMockData: Boolean
     ) {
         coroutineScope.launch {
-            val getLocationDataDeferred = WeatherApi.retrofitService.getLocationDataAsync(
-                apiKey,
-                coordinates,
-                language,
-                details,
-                topLevel
-            )
             try {
-                val locationData = getLocationDataDeferred.await()
-                log("location request successful: $locationData")
+                val locationData = if (useMockData) {
+                    getLocationMockData()
+                } else {
+                    WeatherApi.retrofitService.getLocationDataAsync(
+                        apiKey,
+                        coordinates,
+                        language,
+                        details,
+                        topLevel
+                    ).await()
+                }
+
                 val jsonObject = JSONObject(locationData)
                 val locationKey = jsonObject.getString(KEY_LOCATION_KEY)
                 val cityName = jsonObject.getString(KEY_LOCALIZED_NAME)
-                val countryName = jsonObject.getJSONObject(KEY_COUNTRY).getString(KEY_LOCALIZED_NAME)
+                val countryName =
+                    jsonObject.getJSONObject(KEY_COUNTRY).getString(KEY_LOCALIZED_NAME)
                 val userLocationData = UserLocationData(0, cityName, countryName, locationKey)
                 insertUserLocationDataToDb(userLocationData)
                 _userLocationData.value = getUserLocationDataFromDb()
@@ -192,7 +323,6 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
     }
 
     private suspend fun insertUserLocationDataToDb(userLocationData: UserLocationData) {
-        log("${javaClass.simpleName} insertUserLocationDataToDb")
         withContext(Dispatchers.IO) {
             weatherForecastDao
                 .insertUserLocationData(userLocationData)

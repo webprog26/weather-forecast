@@ -29,5 +29,9 @@ data class DailyForecastData(
     val iconNight: Int,
 
     @ColumnInfo(name = "icon_phrase_night")
-    val iconPhraseNight: String
+    val iconPhraseNight: String,
+
+    @ColumnInfo(name = "city_name")
+    val cityName: String
+
 )
