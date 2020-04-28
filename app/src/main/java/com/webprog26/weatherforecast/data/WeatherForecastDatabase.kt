@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [UserLocationData::class, DailyForecastData::class], version = 1, exportSchema = false)
+@Database(entities = [UserLocationData::class, DailyForecastData::class, HourlyForecastData::class], version = 1, exportSchema = false)
 abstract class WeatherForecastDatabase :  RoomDatabase() {
 
     abstract val weatherForecastDao: WeatherForecastDao

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <com.webprog26.weatherforecast.ui.HourlyForecastItemView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tv_hourly_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"/>
+
+        <ImageView
+            android:id="@+id/iv_hourly_icon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginBottom="12dp"
+            android:contentDescription="@string/current_weather_icon_content_description" />
+
+        <TextView
+            android:id="@+id/tv_hourly_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+    </com.webprog26.weatherforecast.ui.HourlyForecastItemView>
+</layout>

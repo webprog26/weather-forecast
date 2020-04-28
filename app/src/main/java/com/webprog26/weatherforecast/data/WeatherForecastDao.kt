@@ -22,4 +22,13 @@ interface WeatherForecastDao {
 
     @Query("SELECT * from daily_forecast_table")
     fun getDailyForecastData(): DailyForecastData?
+
+    @Insert(entity = HourlyForecastData::class, onConflict = OnConflictStrategy.REPLACE)
+    fun insertHourlyForecastData(hourlyForecastData: List<HourlyForecastData>)
+
+    @Update(entity = HourlyForecastData::class)
+    fun updateHourlyForecastData(hourlyForecastData: List<HourlyForecastData>)
+
+    @Query("SELECT * from hourly_forecast_table")
+    fun getHourlyData() : List<HourlyForecastData?>
 }

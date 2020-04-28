@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDat
                 mainViewModel.onUserLocationDetected(
                     getString(R.string.accuweather_api_key),
                     "${it.latitude}, ${it.longitude}", Locale.getDefault().language,
-                    "false", "true"
+                    "false", "true", true
                 )
                 if (locationFetchingFragment.isAdded) {
                     locationFetchingFragment.onCoordinatesReceived()
@@ -43,7 +43,6 @@ class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDat
 
         mainViewModel.userLocationData.observe(this, Observer {
             if (it == null) {
-                log("userLocationData is null")
                 supportFragmentManager.beginTransaction()
                     .add(android.R.id.content, locationFetchingFragment).commit()
             } else {
@@ -60,17 +59,19 @@ class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDat
             }
         })
 
-        checkLocationPermissionIfNeededAndProceed()
-    }
+        mainViewModel.hourlyForecastData.observe(this, Observer {
+            it?.let {
+                if (forecastFragment.isAdded) {
+                    forecastFragment.setHourlyForecastData(it)
+                }
+            }
+        })
 
-    override fun onStart() {
-        super.onStart()
-        log("onStart()")
+        checkLocationPermissionIfNeededAndProceed()
     }
 
     override fun onRestart() {
         super.onRestart()
-        log("onRestart")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(
                     this,
@@ -113,8 +114,11 @@ class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDat
     override fun onForecastUpdateRequested() {
         mainViewModel.loadDailyForecast(
             getString(R.string.accuweather_api_key),
-            Locale.getDefault().language, "false", "true"
+            Locale.getDefault().language, "false", "true", true
         )
+        mainViewModel.loadHourlyForecast(
+            getString(R.string.accuweather_api_key),
+            Locale.getDefault().language, "false", "true", true)
     }
 
     private fun checkLocationPermissionIfNeededAndProceed() {

@@ -1,45 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:android="http://schemas.android.com/apk/res/android">
+<layout
+    xmlns:android="http://schemas.android.com/apk/res/android">
+<com.webprog26.weatherforecast.ui.DailyForecastView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp">
 
-    <com.webprog26.weatherforecast.ui.DailyForecastView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="16dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp">
 
-        <LinearLayout
+        <ImageView
+            android:id="@+id/iv_daily_icon"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_gravity="center_horizontal"
+            android:contentDescription="@string/current_weather_icon_content_description" />
+
+        <TextView
+            android:id="@+id/tv_max_min_temp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="8dp"
-            android:paddingBottom="16dp">
-
-            <ImageView
-                android:id="@+id/iv_daily_icon"
-                android:layout_width="60dp"
-                android:layout_height="60dp"
-                android:layout_gravity="center_horizontal"
-                android:contentDescription="@string/current_weather_icon_content_description" />
-
-            <TextView
-                android:id="@+id/tv_max_min_temp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:text="@string/max_and_min_temp_text" />
+            android:gravity="center_horizontal"
+            android:text="@string/max_and_min_temp_text" />
 
 
-            <TextView
-                android:id="@+id/tv_daily_icon_phrase"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_horizontal" />
+        <TextView
+            android:id="@+id/tv_daily_icon_phrase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal" />
 
-            <TextView
-                android:id="@+id/tv_city_name"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center_horizontal" />
+        <TextView
+            android:id="@+id/tv_city_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_horizontal" />
+        
+        <TextView
+            android:id="@+id/tv_updated_at"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center|end" />
 
-        </LinearLayout>
-    </com.webprog26.weatherforecast.ui.DailyForecastView>
+    </LinearLayout>
+</com.webprog26.weatherforecast.ui.DailyForecastView>
 </layout>

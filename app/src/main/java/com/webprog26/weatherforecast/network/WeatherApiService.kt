@@ -4,7 +4,6 @@ import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterF
 import kotlinx.coroutines.Deferred
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import retrofit2.http.GET
@@ -45,6 +44,15 @@ interface WeatherApiService {
 
     @GET("/forecasts/v1/daily/1day/{location_key}")
     fun getDailyForecastAsync(
+        @Path("location_key") locationKey: String,
+        @Query("apikey") apiKey: String,
+        @Query("language") language: String,
+        @Query("details") details: String,
+        @Query("metric") metric: String
+    ): Deferred<String>
+
+    @GET("/forecasts/v1/hourly/12hour/{location_key}")
+    fun get12HoursForecastAsync(
         @Path("location_key") locationKey: String,
         @Query("apikey") apiKey: String,
         @Query("language") language: String,

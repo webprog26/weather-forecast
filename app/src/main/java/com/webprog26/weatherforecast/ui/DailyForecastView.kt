@@ -4,18 +4,19 @@ import android.annotation.TargetApi
 import android.content.Context
 import android.os.Build
 import android.util.AttributeSet
-import android.view.LayoutInflater
-import android.widget.LinearLayout
 import androidx.cardview.widget.CardView
-import androidx.databinding.DataBindingUtil
-import com.bumptech.glide.Glide
 import com.webprog26.weatherforecast.R
 import com.webprog26.weatherforecast.data.DailyForecastData
 import com.webprog26.weatherforecast.databinding.DailyForecastViewBinding
-
-private const val DAILY_FORECAST_ICON_BASE_URL = "https://developer.accuweather.com/sites/default/files/"
+import com.webprog26.weatherforecast.getString
+import com.webprog26.weatherforecast.loadIcon
+import java.text.SimpleDateFormat
+import java.util.*
 
 class DailyForecastView : CardView {
+
+    private lateinit var binding: DailyForecastViewBinding
+
     @JvmOverloads
     constructor(
         context: Context,
@@ -24,7 +25,6 @@ class DailyForecastView : CardView {
             : super(context, attrs, defStyleAttr)
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    @SuppressWarnings("unused")
     constructor(
         context: Context,
         attrs: AttributeSet?,
@@ -32,18 +32,18 @@ class DailyForecastView : CardView {
         defStyleRes: Int)
             : super(context, attrs, defStyleAttr)
 
-    private val binding : DailyForecastViewBinding = DataBindingUtil.inflate(LayoutInflater.from(context),
-        R.layout.daily_forecast_view, this, true)
+    override fun onFinishInflate() {
+        super.onFinishInflate()
+        binding = DailyForecastViewBinding.bind(this)
+    }
 
     fun populateWithData(dailyForecastData: DailyForecastData) {
         binding.tvDailyIconPhrase.text = dailyForecastData.iconPhraseDay
-        binding.tvMaxMinTemp.text = context.getString(R.string.max_and_min_temp_text, dailyForecastData.maxTemp, dailyForecastData.minTemp)
+        binding.tvMaxMinTemp.text = getString(R.string.max_and_min_temp_text, dailyForecastData.maxTemp, dailyForecastData.minTemp)
         binding.tvCityName.text = dailyForecastData.cityName
-        val iconFileName = if (dailyForecastData.iconDay < 10) {
-            "0${dailyForecastData.iconDay}"
-        } else {
-            "${dailyForecastData.iconDay}"
-        }
-        Glide.with(this).load("$DAILY_FORECAST_ICON_BASE_URL$iconFileName-s.png").into(binding.ivDailyIcon)
+        binding.tvUpdatedAt.text = getString(R.string.forecast_updated_at,
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(System.currentTimeMillis())))
+
+        loadIcon(dailyForecastData.iconDay, this, binding.ivDailyIcon)
     }
 }
