@@ -67,6 +67,14 @@ class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDat
             }
         })
 
+        mainViewModel.fiveDaysDailyForecastData.observe(this, Observer {
+            it?.let {
+                if (forecastFragment.isAdded) {
+                    forecastFragment.setFiveDaysDailyForecastData(it)
+                }
+            }
+        })
+
         checkLocationPermissionIfNeededAndProceed()
     }
 
@@ -118,6 +126,8 @@ class MainActivity : AppCompatActivity(), LocationFetchingFragment.OnLocationDat
         )
         mainViewModel.loadHourlyForecast(
             getString(R.string.accuweather_api_key),
+            Locale.getDefault().language, "false", "true", true)
+        mainViewModel.load5DaysForecast( getString(R.string.accuweather_api_key),
             Locale.getDefault().language, "false", "true", true)
     }
 

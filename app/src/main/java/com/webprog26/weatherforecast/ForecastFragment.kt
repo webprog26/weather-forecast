@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.webprog26.weatherforecast.data.DailyForecastData
+import com.webprog26.weatherforecast.data.FiveDaysDailyForecastDataWrapper
 import com.webprog26.weatherforecast.data.HourlyForecastDataWrapper
 import com.webprog26.weatherforecast.databinding.FragmentForecastBinding
 import com.webprog26.weatherforecast.ui.WeatherForecastAdapter
@@ -58,10 +59,6 @@ class ForecastFragment : Fragment() {
     }
 
     fun setDailyForecastData(dailyForecastData: DailyForecastData) {
-        updateDailyForecast(dailyForecastData)
-    }
-
-    private fun updateDailyForecast(dailyForecastData: DailyForecastData) {
         binding.progressBar.visibility = View.GONE
         binding.recyclerView.visibility = View.VISIBLE
         adapter.updateDailyForecastData(dailyForecastData)
@@ -73,11 +70,12 @@ class ForecastFragment : Fragment() {
     }
 
     fun setHourlyForecastData(hourlyForecastDataWrapper: HourlyForecastDataWrapper) {
-        updateHourlyForecast(hourlyForecastDataWrapper)
+        adapter.updateHourlyForecastData(hourlyForecastDataWrapper)
     }
 
-    private fun updateHourlyForecast(hourlyForecastDataWrapper: HourlyForecastDataWrapper) {
-        adapter.updateHourlyForecastData(hourlyForecastDataWrapper)
+    fun setFiveDaysDailyForecastData(fiveDaysDailyForecastDataWrapper: FiveDaysDailyForecastDataWrapper) {
+        log("setFiveDaysDailyForecastData")
+        adapter.updateFiveDaysForecastData(fiveDaysDailyForecastDataWrapper)
     }
 
     private fun requestForecastUpdate() {
