@@ -28,4 +28,9 @@
     <string name="november">November</string>
     <string name="december">December</string>
 
+    <!-- App menu -->
+    <string name="app_menu_settings">Settings</string>
+    <string name="app_menu_manage_cities">Manage cities</string>
+
+
 </resources>
