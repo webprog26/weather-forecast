@@ -2,10 +2,8 @@ package com.webprog26.weatherforecast
 
 import android.content.Context
 import android.os.Bundle
+import android.view.*
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.webprog26.weatherforecast.data.DailyForecastData
@@ -27,6 +25,26 @@ class ForecastFragment : Fragment() {
 
     interface OnForecastUpdateRequestedListener {
         fun onForecastUpdateRequested()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId) {
+            R.id.app_menu_settings -> {
+                log("App menu \"Settings\" clicked")
+                true
+            }
+            R.id.app_menu_manage_cities -> {
+                log("App menu \"Manage cities\" clicked")
+                true
+            }
+            else -> return super.onOptionsItemSelected(item)
+
+        }
     }
 
     override fun onAttach(context: Context) {
@@ -56,6 +74,11 @@ class ForecastFragment : Fragment() {
         binding.recyclerView.layoutManager = LinearLayoutManager(activity)
         binding.recyclerView.adapter = adapter
         requestForecastUpdate()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        activity?.menuInflater?.inflate(R.menu.app_menu, menu)
+        super.onCreateOptionsMenu(menu, inflater)
     }
 
     fun setDailyForecastData(dailyForecastData: DailyForecastData) {
