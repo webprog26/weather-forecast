@@ -59,4 +59,13 @@ interface WeatherApiService {
         @Query("details") details: String,
         @Query("metric") metric: String
     ): Deferred<String>
+
+    @GET("forecasts/v1/daily/5day/{location_key}")
+    fun get5DaysForecastAsync(
+        @Path("location_key") locationKey: String,
+        @Query("apikey") apiKey: String,
+        @Query("language") language: String,
+        @Query("details") details: String,
+        @Query("metric") metric: String
+    ): Deferred<String>
 }

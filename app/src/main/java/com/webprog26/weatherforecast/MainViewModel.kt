@@ -12,6 +12,9 @@ import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.lang.Exception
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.collections.ArrayList
 
 private const val KEY_LOCATION_KEY = "Key"
 private const val KEY_LOCALIZED_NAME = "LocalizedName"
@@ -30,9 +33,9 @@ private const val KEY_ICON_PHRASE = "IconPhrase"
 
 private const val KEY_HOURLY_DATE_TIME = "DateTime"
 private const val KEY_HOURLY_WEATHER_ICON = "WeatherIcon"
-private const val KEY_HOURLY_HAS_PRECIPITATION = "HasPrecipitation"
-private const val KEY_HOURLY_PRECIPITATION_TYPE = "PrecipitationType"
-private const val KEY_HOURLY_PRECIPITATION_INTENSITY = "PrecipitationIntensity"
+private const val KEY_HAS_PRECIPITATION = "HasPrecipitation"
+private const val KEY_PRECIPITATION_TYPE = "PrecipitationType"
+private const val KEY_PRECIPITATION_INTENSITY = "PrecipitationIntensity"
 private const val KEY_HOURLY_PRECIPITATION_PROBABILITY = "PrecipitationProbability"
 private const val KEY_HOURLY_IS_DAY_LIGHT = "IsDaylight"
 
@@ -58,11 +61,16 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
     val hourlyForecastData: LiveData<HourlyForecastDataWrapper>
         get() = _hourlyForecastData
 
+    private val _fiveDaysDailyForecastData = MutableLiveData<FiveDaysDailyForecastDataWrapper>()
+    val fiveDaysDailyForecastData : LiveData<FiveDaysDailyForecastDataWrapper>
+    get() = _fiveDaysDailyForecastData
+
     init {
         coroutineScope.launch {
             _userLocationData.value = getUserLocationDataFromDb()
             _dailyForecastData.value = getDailyForecastDataFromDb()
             _hourlyForecastData.value = HourlyForecastDataWrapper(getHourlyForecastDataFromDb())
+            _fiveDaysDailyForecastData.value = FiveDaysDailyForecastDataWrapper(getFiveDaysDailyForecastDataFromDb())
         }
     }
 
@@ -87,6 +95,109 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
     ) {
         coroutineScope.launch {
             getHourlyForecast(apiKey, language, details, metric, useMockData)
+        }
+    }
+
+    fun load5DaysForecast(apiKey: String,
+    language: String,
+    details: String,
+    metric: String,
+    useMockData: Boolean) {
+        log("load5DaysForecast")
+        coroutineScope.launch {
+            get5DaysForecast(apiKey, language, details, metric, useMockData)
+        }
+    }
+
+    private suspend fun get5DaysForecast(apiKey: String,
+                                         language: String,
+                                         details: String,
+                                         metric: String,
+                                         useMockData: Boolean) {
+        withContext(Dispatchers.IO) {
+            weatherForecastDao.getUserLocationData()?.let { it ->
+                try {
+                    val fiveDaysForecastOrigin = if (useMockData) {
+                        get5DaysForecastMockData()
+                    } else {
+                        WeatherApi.retrofitService.get5DaysForecastAsync(it.locationKey, apiKey, language, details, metric
+                        ).await()
+                    }
+
+                    val jsonArray = JSONObject(fiveDaysForecastOrigin).getJSONArray("DailyForecasts")
+                    val fiveDaysDailyForecastsList = ArrayList<FiveDaysDailyForecastData>()
+
+                    for (i in 0 until jsonArray.length()) {
+                        val jsonObject = jsonArray.getJSONObject(i)
+                        val dateString = jsonObject.getString(KEY_DATE)
+                        val dateLocal = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+                            .parse(dateString.substring(0, dateString.indexOf('+')))
+                        val date = SimpleDateFormat("EEE, MMM d", Locale.getDefault()).format(dateLocal!!)
+                        val minTemp = jsonObject.getJSONObject(KEY_TEMP).getJSONObject(KEY_TEMP_MIN).getString(
+                            KEY_VALUE)
+                        val maxTemp = jsonObject.getJSONObject(KEY_TEMP).getJSONObject(KEY_TEMP_MAX).getString(
+                            KEY_VALUE)
+                        val iconDay = jsonObject.getJSONObject(KEY_DAY).getString(KEY_ICON)
+                        val iconPhraseDay = jsonObject.getJSONObject(KEY_DAY).getString(
+                            KEY_ICON_PHRASE)
+                        val hasPrecipitationDay = jsonObject?.getJSONObject(KEY_DAY)?.getString(
+                            KEY_HAS_PRECIPITATION)?.toBoolean()
+                        var precipitationTypeDay : String? = null
+                        var precipitationIntensityDay : String? = null
+                        hasPrecipitationDay?.let {
+                            if (hasPrecipitationDay) {
+                                precipitationTypeDay = jsonObject.getJSONObject(KEY_DAY).getString(
+                                    KEY_PRECIPITATION_TYPE)
+                                precipitationIntensityDay = jsonObject.getJSONObject(KEY_DAY).getString(
+                                    KEY_PRECIPITATION_INTENSITY
+                                )
+                            }
+                        }
+                        val iconNight = jsonObject.getJSONObject(KEY_NIGHT).getString(KEY_ICON)
+                        val iconPhraseNight = jsonObject.getJSONObject(KEY_NIGHT).getString(
+                            KEY_ICON_PHRASE)
+                        val hasPrecipitationNight = jsonObject?.getJSONObject(KEY_NIGHT)?.getString(
+                            KEY_HAS_PRECIPITATION)?.toBoolean()
+                        var precipitationTypeNight : String? = null
+                        var precipitationIntensityNight : String? = null
+                        hasPrecipitationNight?.let {
+                            if (hasPrecipitationNight) {
+                                precipitationTypeNight = jsonObject.getJSONObject(KEY_NIGHT).getString(
+                                    KEY_PRECIPITATION_TYPE)
+                                precipitationIntensityNight = jsonObject.getJSONObject(KEY_NIGHT).getString(
+                                    KEY_PRECIPITATION_INTENSITY
+                                )
+                            }
+                        }
+
+                        val fiveDaysDailyForecastData = FiveDaysDailyForecastData(
+                            id = i.toLong(),
+                            date = date,
+                            minTemp = minTemp.toFloat(),
+                            maxTemp = maxTemp.toFloat(),
+                            iconDay = iconDay.toInt(),
+                            iconPhraseDay = iconPhraseDay,
+                            hasPrecipitationDay = hasPrecipitationDay!!,
+                            precipitationTypeDay = precipitationTypeDay,
+                            precipitationIntensityDay = precipitationIntensityDay,
+                            iconNight = iconNight.toInt(),
+                            iconPhraseNight = iconPhraseNight,
+                            hasPrecipitationNight = hasPrecipitationNight!!,
+                            precipitationTypeNight = precipitationTypeNight,
+                            precipitationIntensityNight = precipitationIntensityNight
+                        )
+                        fiveDaysDailyForecastsList.add(fiveDaysDailyForecastData)
+                    }
+
+                    insertFiveDaysDailyForecastDataToDb(fiveDaysDailyForecastsList)
+                   withContext(Dispatchers.Main) {
+                       _fiveDaysDailyForecastData.value = FiveDaysDailyForecastDataWrapper(fiveDaysDailyForecastsList)
+                   }
+
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
 
@@ -190,17 +301,17 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
                                 val icon = jsonObject.getInt(KEY_HOURLY_WEATHER_ICON)
                                 val iconPhrase = jsonObject.getString(KEY_ICON_PHRASE)
                                 val hasPrecipitation =
-                                    jsonObject?.getString(KEY_HOURLY_HAS_PRECIPITATION)?.toBoolean()
+                                    jsonObject?.getString(KEY_HAS_PRECIPITATION)?.toBoolean()
                                 var precipitationType: String? = null
                                 var precipitationIntensity: String? = null
 
                                 hasPrecipitation?.let {
                                     if (hasPrecipitation) {
                                         precipitationType = jsonObject.getString(
-                                            KEY_HOURLY_PRECIPITATION_TYPE
+                                            KEY_PRECIPITATION_TYPE
                                         )
                                         precipitationIntensity = jsonObject.getString(
-                                            KEY_HOURLY_PRECIPITATION_INTENSITY
+                                            KEY_PRECIPITATION_INTENSITY
                                         )
                                     }
                                 }
@@ -227,8 +338,10 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
                             }
 
                             insertHourlyForecastDataToDb(hourlyForecastsList)
-                            _hourlyForecastData.value =
-                                HourlyForecastDataWrapper(hourlyForecastsList)
+                            withContext(Dispatchers.Main) {
+                                _hourlyForecastData.value =
+                                    HourlyForecastDataWrapper(hourlyForecastsList)
+                            }
 
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -236,6 +349,18 @@ class MainViewModel(application: Application) : AbstractViewModel(application) {
 
                     }
                 }
+        }
+    }
+
+    private suspend fun insertFiveDaysDailyForecastDataToDb(fiveDaysDailyForecastDataList : List<FiveDaysDailyForecastData>) {
+        withContext(Dispatchers.IO) {
+            weatherForecastDao.insertFiveDaysDailyForecastData(fiveDaysDailyForecastDataList)
+        }
+    }
+
+    private suspend fun getFiveDaysDailyForecastDataFromDb() : List<FiveDaysDailyForecastData?> {
+        return withContext(Dispatchers.IO) {
+            weatherForecastDao.getFiveDaysDailyForecastData()
         }
     }
 

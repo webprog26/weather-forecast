@@ -28,3 +28,4 @@ fun loadIcon(icon: Int, parent: View, target: ImageView) {
         .load("https://developer.accuweather.com/sites/default/files/$iconFileName-s.png")
         .into(target)
 }
+

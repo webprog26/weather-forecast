@@ -15,7 +15,10 @@
                 android:id="@+id/hourly_forecast_items_container"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal" />
+                android:orientation="horizontal"
+                android:showDividers="middle"
+                android:divider="?android:listDivider"
+                android:dividerPadding="6dp"/>
 
         </HorizontalScrollView>
 
